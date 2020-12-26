@@ -7,6 +7,8 @@ from paddle.vision.transforms import ToTensor
 # 启动单机多卡训练
 # import paddle.distributed as dist 
 
+from model import Mnist
+
 def main():
     # 初始化并行环境
     # dist.init_parallel_env()
@@ -19,14 +21,7 @@ def main():
     test_loader = paddle.io.DataLoader(val_dataset,batch_size=64)
 
     # 模型搭建
-    mnist = paddle.nn.Sequential(
-        paddle.nn.Flatten(),
-        paddle.nn.Linear(784,512),
-        paddle.nn.ReLU(),
-        paddle.nn.Dropout(),
-        paddle.nn.Linear(512,10)
-    )
-
+    mnist = Mnist()
     # 增加paddle.DataParallel封装
     # mnist = paddle.DataParallel(mnist)
 
