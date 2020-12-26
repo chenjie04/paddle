@@ -8,6 +8,7 @@ from paddle.vision.transforms import ToTensor
 # import paddle.distributed as dist 
 
 from model import Mnist
+from loss import crossEntropyLoss
 
 def main():
     # 初始化并行环境
@@ -26,7 +27,7 @@ def main():
     # mnist = paddle.DataParallel(mnist)
 
     optim = paddle.optimizer.Adam(parameters=mnist.parameters())
-    loss_fn = paddle.nn.CrossEntropyLoss()
+    loss_fn = crossEntropyLoss()
 
     epochs = 5
     for epoch in range(epochs):
