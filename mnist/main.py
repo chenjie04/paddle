@@ -1,4 +1,5 @@
 import paddle
+from paddle.static.input import InputSpec
 import tqdm
 from paddle.vision.transforms import ToTensor
 # 启动单机多卡训练
@@ -64,7 +65,7 @@ def main():
         optim_state_dict = paddle.load('./weights/optim.pdopt')
         optim.set_state_dict(optim_state_dict)
 
-
+    best_acc = 0.0
     for epoch in range(start_epoch,epochs):
         # 训练
         mnist.train()
@@ -92,24 +93,30 @@ def main():
             count += 1
             losses += loss.numpy().item() 
             accuracy += acc.numpy().item() 
-        print("Testing: loss:{loss:.4f}, acc: {acc:.4f}".format(loss=losses/count,acc=accuracy/count))
+        val_loss = losses/count
+        val_acc = accuracy/count
+        print("Testing: loss:{loss:.4f}, acc: {acc:.4f}".format(loss=val_loss,acc=val_acc))
 
         # 保存参数
         print('Saving checkpoint..')
         state = {
             'epoch': epoch,
-            'loss':losses/count,
-            'acc':accuracy/count
+            'loss':val_loss,
+            'acc':val_acc
         }
         # 目前仅支持存储 Layer 或者 Optimizer 的 state_dict 。
         np.save('./weights/info.npy',state,allow_pickle=True) # 保存相关参数
         paddle.save(mnist.state_dict(),'./weights/mnist.pdparams')
         paddle.save(optim.state_dict(),'./weights/optim.pdopt')
-        
+
+        # 保存用于部署的模型和参数
+        if val_acc > best_acc:
+            best_acc = val_acc
+            paddle.jit.save(mnist,'./deploy/mnist',input_spec=[InputSpec(shape=[1,1,28,28],dtype='float32')])    
 
 if __name__ == '__main__':
     main()
-    print('Done!')
+    print('Training finishing ... Done!')
     # dist.spawn(main) #使用当前所有可见GPU并行训练
 
 
