@@ -1,5 +1,7 @@
+from typing import OrderedDict
 import paddle
 from paddle.static.input import InputSpec
+from paddle.vision.transforms.functional import resize
 import tqdm
 from paddle.vision.transforms import ToTensor
 # 启动单机多卡训练
@@ -8,6 +10,9 @@ from paddle.distributed.spawn import spawn
 from paddle.fluid.dygraph.parallel import DataParallel
 import numpy as np
 from argparse import ArgumentParser
+from datetime import datetime
+from collections import OrderedDict
+import os
 
 from model import Mnist
 from loss import crossEntropyLoss
@@ -96,6 +101,24 @@ def main():
         val_loss = losses/count
         val_acc = accuracy/count
         print("Testing: loss:{loss:.4f}, acc: {acc:.4f}".format(loss=val_loss,acc=val_acc))
+
+        # 保存测试过程结果
+        result = OrderedDict()
+        result['timestamp'] = datetime.now()
+        result['epoch'] = epoch
+        result['loss'] = val_loss
+        result['accuracy'] = val_acc
+        
+        result_dir = './result/'
+        if not os.path.exists(result_dir) and result_dir != '':
+            os.makedirs(result_dir)
+        result_file = os.path.join(result_dir,'valid_results.csv')
+        write_heading = not os.path.exists(result_file)
+        with open(result_file, mode='a') as out:
+            if write_heading:
+                out.write(",".join([str(k) for k, v in result.items()]) + '\n')
+            out.write(",".join([str(v) for k, v in result.items()]) + '\n')
+
 
         # 保存参数
         print('Saving checkpoint..')
