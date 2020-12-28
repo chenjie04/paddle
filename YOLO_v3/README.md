@@ -6,7 +6,7 @@
 
 YOLO v3使用COCO数据集进行训练，本节进行数据集准备工作。COCO数据集提供了用于加载、解析和可视化的API，现在进行安装：
 
-```python
+```shell
 # 新建数据集存放目录，这里为了方便多个项目共同使用coco数据集，新建与YOLO v3平行的data目录
 cd ..
 mkdir data
