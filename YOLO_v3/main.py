@@ -14,15 +14,14 @@ from datetime import datetime
 from collections import OrderedDict
 import os
 
-from model import Mnist
-from loss import crossEntropyLoss
+from dataset import cocoDetectionDataset
 
 def parse_args():
-    parser = ArgumentParser(description="Train a mnist classifier!")
+    parser = ArgumentParser(description="Implementation of YOLO v3 with Paddlepaddle 2.0!")
     parser.add_argument('-e', '--epochs', type=int, default=6,
-                        help='number of epochs for training')
-    parser.add_argument('-b', '--batch-size', type=int, default=64,
-                        help='number of examples for each iteration')
+                        help='number of epochs for training.')
+    parser.add_argument('-b', '--batch-size', type=int, default=1,
+                        help='number of examples for each iteration.Still not support batch training yet.')
     parser.add_argument('--resume', '-r',action='store_true', default=False,
                         help='resume from checkpoint')
     return parser.parse_args()
@@ -38,10 +37,15 @@ def main():
     # dist.init_parallel_env()
 
     # 加载数据集
-    train_dataset = paddle.vision.datasets.MNIST(mode='train',transform=ToTensor())
-    val_dataset = paddle.vision.datasets.MNIST(mode='test',transform=ToTensor())
+    train_dataDir = '../data/cocoapi/images/train2017'
+    train_annFile = './cocoapi/annotations/instances_train2014.json'
 
+    train_dataset = cocoDetectionDataset(root=train_dataDir,annFile=train_annFile)
     train_loader = paddle.io.DataLoader(train_dataset,batch_size=args.batch_size,shuffle=True)
+
+    val_dataDir = '../data/cocoapi/images/val2017'
+    val_annFile = './cocoapi/annotations/instances_val2017.json'
+    val_dataset = cocoDetectionDataset(root=val_dataDir,annFile=val_annFile)
     test_loader = paddle.io.DataLoader(val_dataset,batch_size=args.batch_size)
 
     # 模型搭建
