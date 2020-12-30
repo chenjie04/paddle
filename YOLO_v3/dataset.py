@@ -42,7 +42,7 @@ class cocoDetectionDataset(Dataset):
         # 处理图像，返回一张416x416的图像
         path = coco.loadImage(img_id)[0]['file_name']
         img = Image.open(os.path.join(self.root,path)).convert('RGB')
-        img = paddle.vision.transforms.ToTensor()(img)
+        img = paddle.to_tensor(img)
         # Pad to square resolution
         c, h, w = img.shape()
         dim_diff = np.abs(h-w)
@@ -57,6 +57,17 @@ class cocoDetectionDataset(Dataset):
         img = paddle.nn.functional.interpolate(img.unsqueeze(0), size=self.img_size, mode="nearest").squeeze(0)
 
         # 处理图像对应目标检测标注信息
+        annids = coco.getAnnIds(imgIds=img_id)
+        anns = coco.loadAnns(annids)
+        # 从标注anns中提取bounding boxes
+        bboxes = []
+        for i in range(len(anns)):
+            bbox = [self.label_map[anns[i]['category_id']]-1]
+            # anns[i]['bbox']: (x,y,w,h) x和y表示bbox左上角的坐标，w和h表示bbox的宽度和高度
+            bbox.extend(anns[i]['bbox'])
+            bboxes.append(bbox)
+        bboxes = paddle.to_tensor(bboxes)
+        # 因为图像做了缩放，bboxes需要做相应调整
         
         return img, targets
 

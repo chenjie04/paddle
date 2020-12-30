@@ -1,0 +1,4 @@
+data/
+__pycache__
+mnist/__pycache__
+YOLO_v3/__pycache__
