@@ -68,6 +68,7 @@ class cocoDetectionDataset(Dataset):
             bboxes.append(bbox)
         bboxes = paddle.to_tensor(bboxes)
         # 因为图像做了缩放，bboxes需要做相应调整
+        # 计算图像未缩放前的bboxes的左上角和右下角的坐标
         
         return img, targets
 
