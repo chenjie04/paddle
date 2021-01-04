@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 import paddle
 from paddle.io import Dataset
-from pycocotools.coco import COCO 
+from pycocotools.coco import COCO
 
 
 class cocoDetectionDataset(Dataset):
@@ -14,13 +14,22 @@ class cocoDetectionDataset(Dataset):
         annFile (string): Path to json annotation file.
         
     """
-    def __init__(self, root, annFile,img_size=416):
+    def __init__(self, list_path, img_size=416, augment=True,multiscale=True):
+
         super(cocoDetectionDataset, self).__init__()
-        self.root = root
-        self.coco = COCO(annFile)
-        self.ids = list(sorted(self.coco.imgs.keys()))
+
+        with open(list_path, 'r') as file:
+            self.img_files = file.readlines()
+
+        self.labels_files = [
+            path.replace("images",
+                         "labels").replace(".png",
+                                           ".txt").replace(".jpg", ".txt")
+            for path in self.img_files
+        ]
 
         self.img_size = img_size
+        
 
         COCO_LABEL_MAP = { 1:  1,  2:  2,  3:  3,  4:  4,  5:  5,  6:  6,  7:  7,  8:  8,
                            9:  9, 10: 10, 11: 11, 13: 12, 14: 13, 15: 14, 16: 15, 17: 16,
@@ -45,7 +54,7 @@ class cocoDetectionDataset(Dataset):
         # ---------------------------------
 
         path = coco.loadImgs(img_id)[0]['file_name']
-        img = Image.open(os.path.join(self.root,path)).convert('RGB')
+        img = Image.open(os.path.join(self.root, path)).convert('RGB')
         img = paddle.vision.transforms.ToTensor()(img)
 
         # 处理图像通道少于3的情形
@@ -55,17 +64,25 @@ class cocoDetectionDataset(Dataset):
 
         # Pad to square resolution
         c, h, w = img.shape
-        dim_diff = np.abs(h-w)
+        dim_diff = np.abs(h - w)
         pad1, pad2 = dim_diff // 2, dim_diff - dim_diff // 2
         # Determine padding pad =（左，右，上，下）
         pad = [0, 0, pad1, pad2] if h <= w else [pad1, pad2, 0, 0]
         # Add padding
-        img = paddle.nn.functional.pad(img.unsqueeze(0),pad,"constant",value=0.0,data_format='NCHW').squeeze(0)
+        img = paddle.nn.functional.pad(img.unsqueeze(0),
+                                       pad,
+                                       "constant",
+                                       value=0.0,
+                                       data_format='NCHW').squeeze(0)
         _, padded_h, padded_w = img.shape
 
         # resize
         # unsqueeze(0)在前面增加一个维度，squeeze(0)去掉第一个维度
-        img = paddle.nn.functional.interpolate(img.unsqueeze(0), size=(self.img_size,self.img_size), mode="nearest",data_format='NCHW').squeeze(0)
+        img = paddle.nn.functional.interpolate(img.unsqueeze(0),
+                                               size=(self.img_size,
+                                                     self.img_size),
+                                               mode="nearest",
+                                               data_format='NCHW').squeeze(0)
 
         # -------------------------------
         # 处理图像对应目标检测标注信息
@@ -74,12 +91,12 @@ class cocoDetectionDataset(Dataset):
         annids = coco.getAnnIds(imgIds=img_id)
         anns = coco.loadAnns(annids)
         # 从标注anns中提取bounding boxes
-        print('len(anns):',len(anns))
+        print('len(anns):', len(anns))
         bboxes = []
         for i in range(len(anns)):
-            bbox = [self.label_map[anns[i]['category_id']]-1]
+            bbox = [self.label_map[anns[i]['category_id']] - 1]
             # anns[i]['bbox']: (x,y,w,h) x和y表示bbox左上角的坐标，w和h表示bbox的宽度和高度
-            bbox.extend([.0,.0,.0,.0])
+            bbox.extend([.0, .0, .0, .0])
             bboxes.append(bbox)
         if bboxes:
             bboxes = paddle.to_tensor(bboxes)
@@ -100,12 +117,12 @@ class cocoDetectionDataset(Dataset):
             bboxes[:, 3] *= 1 / padded_w
             bboxes[:, 4] *= 1 / padded_h
         else:
-            bboxes = paddle.zeros((1,5))
+            bboxes = paddle.zeros((1, 5))
 
         # 针对resize的调整呢？为啥没有？
 
         targets = bboxes
-        
+
         return img, targets
 
     def __len__(self):

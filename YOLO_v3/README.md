@@ -2,9 +2,7 @@
 
 本项目基于Paddlepaddle 2.0实现YOLO v3。
 
-## 1. 数据集准备
-
-YOLO v3使用COCO数据集进行训练，本节进行数据集准备工作。COCO数据集提供了用于加载、解析和可视化的API，现在进行安装：
+## 1. 环境准备
 
 ```python
 # 安装必要编译套件
@@ -13,6 +11,15 @@ $ sudo apt install build-essential
 $ conda create -n yolo_v3 python=3.7
 # 激活环境
 $ conda activate yolo_v3
+# 安装依赖
+$ conda install --yes --file requirements.txt
+```
+
+## 2. 数据集准备
+
+YOLO v3使用COCO数据集进行训练，本节进行数据集准备工作。COCO数据集提供了用于加载、解析和可视化的API，如果缺失，请安装。
+
+```python
 # 安装cocoapi
 $ pip install pycocotools
 ```
@@ -106,5 +113,23 @@ categories[{
     "supercategory": str,
 }]
 ```
-## 2. 安装依赖
+## 3. 数据预处理
 
+数据预处理包括数据清洗，去除数据集中没有bounding box的数据；以及对数据集进行重新划分，从val2014中选取5k张作为测试集，其余的加上train2014作为训练集。
+
+```python
+$ python data_preprocess.py
+```
+
+## 4. 训练
+
+```python
+$ python main.py
+```
+
+## 5. 测试
+
+```python
+$ python test.py
+```
+## 6. 结果展示
