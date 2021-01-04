@@ -1,20 +1,38 @@
+from matplotlib import patches
 import paddle
-from dataset import cocoDetectionDataset
+from data.dataset import cocoDetectionDataset
+from pycocotools.coco import COCO
+import numpy as np
 
-val_dataDir = '../data/coco/images/val2014'
-val_annFile = '../data/coco/annotations/instances_val2014.json'
-val_dataset = cocoDetectionDataset(root=val_dataDir,annFile=val_annFile)
+# path = '../data/coco/labels/val2014/COCO_val2014_000000000208.txt'
+# boxes = np.loadtxt(path)
+# boxes = paddle.to_tensor(boxes)
+# print(paddle.reshape(boxes,(-1,5)))
 
-for i in range(300):
+data_path = '../data/coco/5k.txt'
+data_set = cocoDetectionDataset(data_path)
+
+# for i in range(10):
+#     print("<< {} <<".format(i))
+#     _, img, label = data_set.__getitem__(i)
+#     print(img.shape)
+#     print(label.shape)
+#     print(">> {} >>".format(i))
+
+# print(data_set.__len__)
+# x1 = paddle.zeros((3,416,416))
+# x2 = paddle.zeros((3,416,416))
+# x3 = paddle.zeros((3,416,416))
+# out = paddle.stack([x1, x2, x3], axis=0)
+# print(out.shape)  # [3, 1, 2]
+# print(out)
+test_loader = paddle.io.DataLoader(data_set,
+                                   batch_size=2,
+                                   shuffle=True,
+                                   collate_fn=data_set.collate_fn)
+
+for i, (_, image, label) in enumerate(test_loader()):
     print("<< {} <<".format(i))
-    img, label = val_dataset.__getitem__(i)
-    print(img.shape)
+    print(image.shape)
     print(label.shape)
     print(">> {} >>".format(i))
-
-
-# test_loader = paddle.io.DataLoader(val_dataset,batch_size=2,shuffle=True)
-
-# for _, (image, label) in enumerate(test_loader()):
-#      print(image.shape)
-#      print(label.shape)
