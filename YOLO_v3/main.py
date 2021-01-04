@@ -37,14 +37,14 @@ def main():
     # dist.init_parallel_env()
 
     # 加载数据集
-    train_dataDir = '../data/cocoapi/images/train2017'
-    train_annFile = './cocoapi/annotations/instances_train2014.json'
+    train_dataDir = '../data/coco/images/train2014'
+    train_annFile = '../coco/annotations/instances_train2014.json'
 
     train_dataset = cocoDetectionDataset(root=train_dataDir,annFile=train_annFile)
     train_loader = paddle.io.DataLoader(train_dataset,batch_size=args.batch_size,shuffle=True)
 
-    val_dataDir = '../data/cocoapi/images/val2017'
-    val_annFile = './cocoapi/annotations/instances_val2017.json'
+    val_dataDir = '../data/coco/images/val2014'
+    val_annFile = '../coco/annotations/instances_val2014.json'
     val_dataset = cocoDetectionDataset(root=val_dataDir,annFile=val_annFile)
     test_loader = paddle.io.DataLoader(val_dataset,batch_size=args.batch_size)
 

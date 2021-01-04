@@ -34,41 +34,77 @@ class cocoDetectionDataset(Dataset):
                           82: 73, 84: 74, 85: 75, 86: 76, 87: 77, 88: 78, 89: 79, 90: 80}
         self.label_map = COCO_LABEL_MAP
 
+        self.batch_count = 0
 
     def __getitem__(self, index):
         coco = self.coco
         img_id = self.ids[index]
 
+        # ---------------------------------
         # 处理图像，返回一张416x416的图像
-        path = coco.loadImage(img_id)[0]['file_name']
+        # ---------------------------------
+
+        path = coco.loadImgs(img_id)[0]['file_name']
         img = Image.open(os.path.join(self.root,path)).convert('RGB')
-        img = paddle.to_tensor(img)
+        img = paddle.vision.transforms.ToTensor()(img)
+
+        # 处理图像通道少于3的情形
+        if len(img.shape) != 3:
+            img = img.unsqueeze(0)
+            img = img.expand((3, img.shape[1:]))
+
         # Pad to square resolution
-        c, h, w = img.shape()
+        c, h, w = img.shape
         dim_diff = np.abs(h-w)
         pad1, pad2 = dim_diff // 2, dim_diff - dim_diff // 2
         # Determine padding pad =（左，右，上，下）
-        pad = (0, 0, pad1, pad2) if h <= w else (pad1, pad2, 0, 0)
+        pad = [0, 0, pad1, pad2] if h <= w else [pad1, pad2, 0, 0]
         # Add padding
-        img = paddle.nn.functional.pad(img,pad,"constant",value=0.0)
+        img = paddle.nn.functional.pad(img.unsqueeze(0),pad,"constant",value=0.0,data_format='NCHW').squeeze(0)
         _, padded_h, padded_w = img.shape
+
         # resize
         # unsqueeze(0)在前面增加一个维度，squeeze(0)去掉第一个维度
-        img = paddle.nn.functional.interpolate(img.unsqueeze(0), size=self.img_size, mode="nearest").squeeze(0)
+        img = paddle.nn.functional.interpolate(img.unsqueeze(0), size=(self.img_size,self.img_size), mode="nearest",data_format='NCHW').squeeze(0)
 
+        # -------------------------------
         # 处理图像对应目标检测标注信息
+        # -------------------------------
+
         annids = coco.getAnnIds(imgIds=img_id)
         anns = coco.loadAnns(annids)
         # 从标注anns中提取bounding boxes
+        print('len(anns):',len(anns))
         bboxes = []
         for i in range(len(anns)):
             bbox = [self.label_map[anns[i]['category_id']]-1]
             # anns[i]['bbox']: (x,y,w,h) x和y表示bbox左上角的坐标，w和h表示bbox的宽度和高度
-            bbox.extend(anns[i]['bbox'])
+            bbox.extend([.0,.0,.0,.0])
             bboxes.append(bbox)
-        bboxes = paddle.to_tensor(bboxes)
-        # 因为图像做了缩放，bboxes需要做相应调整
-        # 计算图像未缩放前的bboxes的左上角和右下角的坐标
+        if bboxes:
+            bboxes = paddle.to_tensor(bboxes)
+            # 因为图像做了缩放，bboxes需要做相应调整
+            # 计算图像未缩放前的bboxes的左上角和右下角的坐标
+            x1 = (bboxes[:, 1])
+            y1 = (bboxes[:, 2])
+            x2 = (bboxes[:, 1] + bboxes[:, 3])
+            y2 = (bboxes[:, 2] + bboxes[:, 4])
+            # Adjust for added padding（调整padding后两点的坐标）
+            x1 += pad[0]
+            y1 += pad[2]
+            x2 += pad[1]
+            y2 += pad[3]
+            # Returns (x, y, w, h)（重新归一化，（x,y）表示中心点坐标，（w,h）表示bbox的宽和高）
+            bboxes[:, 1] = ((x1 + x2) / 2) / padded_w
+            bboxes[:, 2] = ((y1 + y2) / 2) / padded_h
+            bboxes[:, 3] *= 1 / padded_w
+            bboxes[:, 4] *= 1 / padded_h
+        else:
+            bboxes = paddle.zeros((1,5))
+
+        # 针对resize的调整呢？为啥没有？
+
+        targets = bboxes
         
         return img, targets
 
